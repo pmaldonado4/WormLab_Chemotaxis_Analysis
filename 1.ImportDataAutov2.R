@@ -6,7 +6,9 @@ rm(list=ls())
 library(dplyr)
 library(ggplot2)
 library(gridExtra)
-setwd("~/Desktop/R Code to Review/03112021/")
+library(stringi)
+library(ggforce)
+setwd("~/Desktop/R Code to Review/glr-3 Project Files/Raw Data for Figures/Figure 1/Figure 1 Spreadsheets Data/ICE Diacetyl copy")
 
 genotypes <- data.frame(list.files(path = ".", pattern = NULL, all.files = FALSE,
                        full.names = FALSE, recursive = FALSE,
@@ -19,7 +21,8 @@ bind.data <- function (i, data.position, data.mobility, genotype, day){
                 dplyr::rename (time=V2, x=paste("V",j, sep=''), y=paste("V",(j+1), sep='')) %>%
                 dplyr::mutate (id=paste(genotype, day, i, sep = '.'), genotype=genotype)
         mobility <- data.frame(backward = data.mobility [, (i+2)])
-        data.frame(cbind(position, mobility))
+        assay <- rep(paste(n),times = nrow(position))
+        data.frame(cbind(position, mobility, assay))
 }
 
 #import.experiment.by.genotpe imports data and combines them
@@ -78,10 +81,12 @@ for (i in 1:n1){
 save(data.DF, file = "./CompleteDataSet.rda")
 
 TheAllPlot <- ggplot(data = data.DF, mapping = aes(x = x, y = y)) +
-        geom_path(aes(color = genotype), alpha=0.4)
+        geom_path(aes(color = genotype), alpha=0.4)+
+  facet_wrap_paginate(~ assay + genotype, page = 4)
 TheAllPlot
 
 
+ggsave("all_assays.eps")
 
 
 
