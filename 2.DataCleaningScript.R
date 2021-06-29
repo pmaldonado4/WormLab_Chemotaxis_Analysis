@@ -47,19 +47,22 @@ summarySE <- function(data=NULL, measurevar, groupvars=NULL, na.rm=FALSE,
         
         return(datac)
 }
-setwd("~/Desktop/R Code to Review/03112021/")
+setwd("~/Desktop/R Code to Review/glr-3 Project Files/Raw Data for Figures/Figure 1/Figure 1 Spreadsheets Data/ICE Diacetyl copy")
+
 
 load('./CompleteDataSet.rda')
 
 # 
-# data.DF <- data.DF %>%
-#         dplyr::filter(id)
+data.DF <- data.DF %>%
+        mutate(Assay.ID = paste(genotype, assay, sep = "."))
 #plotting original data
-data.plot <- ggplot(data = data.DF, mapping = aes(x = x, y = y),factor(genotype, level = c('N2', 'ICE'))) +
-        geom_path(aes(color = id), alpha=0.4)+
-        facet_wrap( ~ genotype, ncol=1) +
-        theme(legend.position = "none")
-data.plot
+
+Assay.Parameters.DF <- data.DF %>%
+        dplyr::group_by(Assay.ID) %>%
+        dplyr::summarize(maxY = max(y, na.rm = T))
+
+
+
 
 all.tracks.DF <- data.DF %>%
         filter (y > 0, y < 450000) 
