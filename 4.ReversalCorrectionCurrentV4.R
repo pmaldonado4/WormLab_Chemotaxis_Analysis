@@ -15,8 +15,9 @@ library(gridExtra)
 library(data.table)
 library(rowr)
 rm(list=ls())
-setwd("~/Desktop/R Code to Review/03112021")
+setwd("~/Desktop/R Code to Review/glr-3 Project Files/Raw Data for Figures/Figure 1/Figure 1 Spreadsheets Data/ICE Diacetyl copy")
 load('./datasmoothandfull.rda')
+data.DF <- real.worms.data.DF
 data.DF <- data.DF %>% 
     mutate(backward = recode(backward, "R" = 1, "F"=0, "I"=0))
 
@@ -95,7 +96,7 @@ for (i in 1:nrow(data.DF2)) { #####this step corrects errors that happen during 
         
 }
 
-data.new <- cbind.fill(data.DF, data.DF2)
+data.new <- cbind(data.DF, data.DF2)
 
 data.DF <- data.new %>%
         dplyr::rename(backward.cor = corr..i..)
@@ -118,13 +119,12 @@ for (i in 1:nrow(WormID.DF)) {
                   labels = c("before", "after correction"),
                   ncol = 1, nrow = 2)
         
-        ggsave(paste(as.character(WormID.DF[wid,1]), "pdf", sep = "."))
+        ggsave(paste(as.character(WormID.DF[wid,1]),"correctedmovement", "pdf", sep = "."))
 } ###Plot before and after for quality check
 
-
-x <- diff(data.DF$backward.cor)
-
-data.DF <- cbind.fill(data.DF,x)
+data.DF <- data.DF %>%
+    group_by(id, genotype) %>%
+    mutate(RevCount = backward.cor-lag(backward.cor))
 
 displacement <- function(x1,y1){
     x <- x1- lag(x1)
@@ -136,7 +136,7 @@ data.DF <-data.DF %>% group_by(id,genotype) %>%
     mutate(speed = displacement(x,y)/0.125)
 revcount <- data.DF %>% 
     group_by(id,genotype) %>%
-    dplyr::summarise(revcount = (sum((object==1))),
+    dplyr::summarise(revcount = (sum((RevCount==1), na.rm =T)),
                      time_observed = (max(time))/60,
                      speed = mean(speed, na.rm = T),
                      rev_freq = revcount/time_observed)
@@ -148,7 +148,7 @@ revcount <- revcount %>%
 write.csv(revcount, "reversalandspeed.csv")
 save(data.DF, file = ".//FullDataCor.rda")  
 
-for (i in 1:100){
+for (i in 1:nrow(WormID.DF)){
     
     WormID.DF <- data.frame(unique(data.DF$id))
     wid <-i
@@ -158,10 +158,15 @@ for (i in 1:100){
         #geom_path(aes(alpha= 0.002))+
         geom_path(data=subset(data.DF,id %in% c(paste(as.character(WormID.DF[wid,1]), sep = " ", collapse = NULL))), 
                   aes(x=x, y=y), color='black') + 
-        coord_fixed(ratio = 1, xlim = (NULL), ylim = NULL, expand = TRUE,
-                    clip = "on")+
+        geom_point(data=subset(data.DF,id %in% c(paste(as.character(WormID.DF[wid,1]), sep = " ", collapse = NULL))), 
+                   aes(x=xref, y=yref), color='red')+
         ggtitle(paste(paste(as.character(WormID.DF[wid,1]), sep = " ", collapse = NULL)))+
-        theme_minimal()
+        coord_fixed(ratio=1)+
+        theme_minimal() +
+        geom_segment(aes(x = 2000, y = 10000, xend = 2000, yend = 20000)) +
+        annotate("text", x=6000, y=15000, label= "1cm") +
+        geom_segment(aes(x = 2000, y = 30000, xend = 2000, yend = 31000)) +
+        annotate("text", x=6000, y=31000, label= "1mm")
     tracks.plot + theme(panel.grid.major = element_blank(), 
                         panel.grid.minor = element_blank(),
                         panel.background = element_blank(), 
@@ -169,9 +174,10 @@ for (i in 1:100){
                         axis.title = element_blank(), 
                         axis.text = element_blank())
     
-    ggsave(paste(as.character(WormID.DF[wid,1]), "pdf", sep = "."))
+    ggsave(paste(as.character(WormID.DF[wid,1]),"track", "pdf", sep = "."))
     
     
     
     
 }
+
