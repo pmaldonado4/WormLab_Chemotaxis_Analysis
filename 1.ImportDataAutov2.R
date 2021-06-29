@@ -86,7 +86,7 @@ TheAllPlot <- ggplot(data = data.DF, mapping = aes(x = x, y = y)) +
 TheAllPlot
 
 
-ggsave("all_assays.eps")
+ggsave("all_assays.pdf")
 
 
 
