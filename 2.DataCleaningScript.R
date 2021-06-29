@@ -59,13 +59,18 @@ data.DF <- data.DF %>%
 
 Assay.Parameters.DF <- data.DF %>%
         dplyr::group_by(Assay.ID) %>%
-        dplyr::summarize(maxY = max(y, na.rm = T))
+        dplyr::summarize(maxY = max(y, na.rm = T)*0.9)
+data.DF <- data.DF %>%
+        left_join(Assay.Parameters.DF, by = "Assay.ID")
+data.DF <- data.DF %>%
+        group_by(id) %>%
+        mutate(Max.Diff = y-maxY) %>%
+        filter(Max.Diff < 0)
 
-
-
-
-all.tracks.DF <- data.DF %>%
-        filter (y > 0, y < 450000) 
+all.tracks.DF <- data.DF
+# 
+# all.tracks.DF <- data.DF %>%
+#         filter (y > 0, y < 450000) 
 #plotting data filtered by Y
 all.tracks.plot <- ggplot(data = all.tracks.DF, mapping = aes(x = x, y = y)) +
         geom_path(aes(color = id), alpha=0.4)+
@@ -255,52 +260,10 @@ AllWorms.DF <- all.tracks.DF %>%
         filter ((id %in% real.worms.DF$id))
 save(AllWorms.DF, file = ".//full.position.rda")
 
-break
+
 real.worms.data.DF <- real.worms.data.DF %>% 
         mutate(backward = recode(backward, "R" = 1, "F"=0, "I"=0))
 
 
 save(real.worms.data.DF, file = ".//Realwormsforanalysis.rda")
-
-tgc <- summarySE(real.worms.DF, measurevar="time_observed", groupvars=c("genotype"))
-
-
-
-summary <- real.worms.DF %>% # the names of the new data frame and the data frame to be summarised
-        group_by(genotype) %>%   # the grouping variable
-        dplyr::summarise(time_observed1 = mean(time_observed),  # calculates the mean of each group
-                  sd_PL = sd(time_observed), # calculates the standard deviation of each group
-                  n_PL = n(),  # calculates the sample size per group
-                  SE_PL = sd(time_observed)/sqrt(n())) # calculates the standard error of each group
-names(summary)[2]<-"time_observed"
-
-sem <- function(){
-        sd(x,na.rm = TRUE)/sqrt(length(x, na.rm = TRUE), na.rm = TRUE)
-}
-sem(real.worms.DF$time_observed)
-secplot <- ggplot(real.worms.DF, aes(y = time_observed, x = genotype,fill = genotype, group = genotype), colour="black") + 
-        stat_summary(fun.y = mean, #Calculates mean to be plotted
-                     fun.ymin = function(x) mean(x) - sd(x)/sqrt(105), ####Calculates range of error bar +/- sem
-                     fun.ymax = function(x) mean(x) + sd(x)/sqrt(104),
-                     geom = "errorbar", size =1, width =0.1) + ####adss error bar ,width controls width of end of error bar
-        stat_summary(fun.y = mean,
-                     geom = "bar") + ###Sets what type of plot to show
-        ylab("Time to target (s)")+
-        theme_classic2()+
-        theme(legend.position = "none",axis.title = element_text(size=20),axis.text = element_text(size=15))+
-        theme(axis.text.x= element_text(size = 20, colour = "black"),
-              axis.text.y= element_text(size = 20, colour = "black"),
-              axis.line = element_line(size = 1),
-              axis.ticks.length = unit(9, "pt"),
-              axis.ticks = element_line(size = 1),
-              plot.margin=unit(c(1,3.5,1,1),"cm"))+
-        scale_y_continuous(expand = c(0, 0)) #####Puts data at origin
-        #stat_compare_means(data = real.worms.DF,aes(group = genotype), label = "p.signif",label.y = 450) +####Calculates significance and adds it to plot
-        #scale_x_discrete(limits = positions)
-
-secplot + stat_compare_means(method = "t.test",aes(label = ..p.signif..), 
-                             label.x = 1.8955, label.y = 290, size = 8) +
-        stat_compare_means(method = "t.test", label.y = 320, label.x = 1.95)
-
-ggsave("timetotargetriaice.pdf")
-
+break
