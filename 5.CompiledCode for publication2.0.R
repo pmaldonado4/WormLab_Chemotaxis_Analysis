@@ -88,8 +88,13 @@ data.DF <- data.DF %>%
                refx = rvector(x,xref),
                refy = rvector(y,yref),
                bearing.angle = anglecalc2(wormx,wormy,refx,refy),
+               wormxsmooth = wvector(smoothx),
+               wormysmooth = wvector(smoothy),
+               smoothxref = rvector(smoothx, xref),
+               smoothyref = rvector(smoothy, yref),
+               bearing.angle.smooth = anglecalc2(wormxsmooth,wormysmooth,smoothxref,smoothyref),
                speed = displacement/0.125)
-
+save(data.DF, file = ".//databearing.rda")
 datasum <- data.DF %>%
         group_by(id,genotype) %>%
         dplyr::summarize(totaldist = sum(displacement, na.rm = TRUE),

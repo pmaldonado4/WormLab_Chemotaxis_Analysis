@@ -12,7 +12,7 @@ library(tidyverse)
 library(gridExtra)
 library(data.table)
 library(rowr)
-setwd("~/Desktop/R Code to Review/03112021")
+setwd("~/Desktop/R Code to Review/glr-3 Project Files/Raw Data for Figures/Figure 1/Figure 1 Spreadsheets Data/ICE Diacetyl copy")
 rm(list=ls())
 summarySE <- function(data=NULL, measurevar, groupvars=NULL, na.rm=TRUE,
                       conf.interval=.95, .drop=TRUE) {
@@ -51,7 +51,6 @@ summarySE <- function(data=NULL, measurevar, groupvars=NULL, na.rm=TRUE,
 }
 
 load('./databearing.rda')
-# data.DF <- data.complete.DF
 data.DF$obs <- 1:nrow(data.DF)
 data.DF <- data.DF %>% group_by(id) %>% filter(max(obs) != obs)
 
@@ -92,12 +91,14 @@ test <- data.DF %>%
         #select(-4)
 data.DF <- cbind(data.DF$id,test)
 
-daiffy <- data.frame(diff(data.DF$thresholdunder))
-colnames(daiffy) <-"indexunder"
-#data.DF <- dplyr::select(data.DF, -c(rleid(thresholdunder)))
-data.DF <- cbind.fill(data.DF, daiffy)
-
-data.DF <- cbind(data.DF,id)
+# daiffy <- data.frame(diff(data.DF$thresholdunder))
+# colnames(daiffy) <-"indexunder"
+# #data.DF <- dplyr::select(data.DF, -c(rleid(thresholdunder)))
+# data.DF <- cbind.fill(data.DF, daiffy)
+data.DF <- data.DF %>%
+        group_by(id) %>%
+        mutate(indexunder = thresholdunder-lag(thresholdunder))
+#data.DF <- cbind(data.DF,id)
 #colnames(data.DF)[20] <- "id"
 data.DF.under <-data.DF[data.DF$indexunder <= -1, ] 
 data.DF.over <-data.DF[data.DF$indexunder == 1, ] 
@@ -117,7 +118,7 @@ df.2 <- data.DF.over %>%
                           meandist.over = mean(cum.sum, na.rm = TRUE)
         )
 
-datasummary.Df <- cbind.fill(df,df.2[,3],df.2[,4],df.2[,5])
+datasummary.Df <- cbind(df,df.2[,3],df.2[,4],df.2[,5])
 datasummary.Df <- datasummary.Df %>%
         group_by(id,genotype) %>%
         mutate(totalnumruns = totalnum.runsover+totalnum.runsunder,
