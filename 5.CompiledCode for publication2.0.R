@@ -170,4 +170,3 @@ good + scale_color_gradient(low="yellow", high="red", limits = c(0,180))
 ggsave("weathervanevalidation.pdf")
 plot(data1$time,data1$steeringangle, type = "l")
 save(data1, file = ".//datasampledat10um.rda")  
-
