@@ -6,26 +6,28 @@ library(reshape2)
 library(tidyverse)
 library(gridExtra)
 library(data.table)
-library(rowr)
-rm(list=ls())
-setwd("~/Desktop/Figure 1/Figure 1 Spreadsheets Data/ICE IAA")
-load('./databearing.rda')
 
+rm(list=ls())
+setwd("~/Desktop/R Code to Review/glr-3 Project Files/Raw Data for Figures/Figure 1/Figure 1 Spreadsheets Data/ICE Diacetyl copy")
+load('./databearing.rda')
+data.DF <- data.DF %>%
+        select(c(time,x,y,id,genotype,Assay.ID,xref,yref,date,smoothx,smoothy,backward.cor,RevCount,speed,bearing.angle,bearing.angle.smooth))
 #data.DF <- data.complete.DF
-#################################Determining angle thresholds for subsequent analysys
+#################################Determining angle thresholds for subsequent analysis
 ##############################################################
 #################################
 #################################
 x <- abs(data.frame(data.DF$bearing.angle.smooth))
-
-angle <- 60
-x[x < angle] <- 0 #####0 equals under threshold
-x[x > angle] <- 1
-#x[x > 0 & x < 50] <- 1
-
-#x[x > 90] <- 1
-nrow(data.frame((unique(data.DF$id))))
-data.DF <- rowr::cbind.fill(data.DF,x)
+data.DF <- data.DF %>% 
+        group_by(id,genotype) %>%
+        mutate(Angle.Threshold = if_else(bearing.angle.smooth > 45,0,1 ))
+# angle <- 45
+# x[x < angle] <- 0 #####0 equals under threshold
+# x[x > angle] <- 1
+# x[x > 0 & x < 45] <- 1
+# x[x > 45] <- 1
+#nrow(data.frame((unique(data.DF$id))))
+# data.DF <- cbind(data.DF,x)
 
 numbering = function(v,k) {
         ## First, replacing stretches of less than k consecutive 0s by 1s
@@ -36,10 +38,13 @@ numbering = function(v,k) {
         
 }
 #test <- (numbering(data.DF$backward.cor,1))
-test <- data.DF$backward.cor
-test <- data.frame(diff(test))
-data.DF <- rowr::cbind.fill(data.DF,test)
-backward.index <- (which(data.DF$diff.test.==1 & data.DF$data.DF.bearing.angle==1, arr.ind=TRUE))
+# data.DF <- data.DF %>%
+#         group_by(id) %>%
+#         mutate(diff.test. = backward.cor-lag(backward.cor))
+#test <- data.DF$backward.cor
+#test <- data.frame(diff(test))
+#data.DF <- rowr::cbind.fill(data.DF,test)
+backward.index <- (which(data.DF$diff.test.==1 & data.DF$data.DF.bearing.angle.smooth==1, arr.ind=TRUE))
 backward.index1 <- (which(data.DF$diff.test.==1,arr.ind=TRUE))
 backward.index.2sec <- (backward.index)
 
@@ -61,12 +66,16 @@ data.rev <- data.reversal.DF %>%
         dplyr::group_by(id) %>% 
         dplyr::summarize(numrev = sum(backward))
 
-
-time.DF <- cbind.fill(time.DF,data.rev[,2])
+time.DF <- time.DF %>%
+        left_join(data.rev, by = "id")
+#time.DF <- cbind(time.DF,data.rev[,2])
 rev.Freq.DF <- time.DF %>% 
         dplyr::group_by(id,genotype) %>%
         dplyr::summarize(reversal.frequency = numrev/time_observed )
-reversalandtime.DF <- cbind.fill(time.DF, rev.Freq.DF[,3])
+reversalandtime.DF <- time.DF %>%
+        left_join(rev.Freq.DF)
+
+#reversalandtime.DF <- cbind.fill(time.DF, rev.Freq.DF[,3])
 save(reversalandtime.DF, file = "./totalreversalfreq.rda")
 summarySE <- function(data=NULL, measurevar, groupvars=NULL, na.rm=TRUE,
                       conf.interval=.95, .drop=TRUE) {
@@ -117,7 +126,7 @@ totalrev.plot <- ggplot(data=tgc, aes(x=genotype, y=reversal.frequency)) +
 
 totalrev.plot
 
-######REversal frequency at different zones of bearing angle####################
+######Reversal frequency at different zones of bearing angle####################
 ######
 ######
 ######
@@ -126,20 +135,20 @@ totalrev.plot
 ######
 data.DF$bearing.angle <- abs(data.DF$bearing.angle.smooth)
 x <- data.frame(data.DF$bearing.angle.smooth)
-i <- 90
-angle1 <- 45
+i <- 45
+#angle1 <- 45
 angle <- i
 x[x > 0 & x < i] <- 1 #####0 equals under threshold
 x[x > 1] <- 0
 
 
 colnames(x) <- "timeunderangle"
-data.DF <- cbind.fill(data.DF,x)
+data.DF <- cbind(data.DF,x)
 angle.index1 <- (which(x==1,arr.ind=TRUE))
 angle.index2 <- (which(x==0,arr.ind=TRUE))
-angleatzone <- data.DF[angle.index1,]
-angleatzone2 <- data.DF[angle.index2,]
-i <- 60
+angleatzone <- data.DF[angle.index1[,1],]
+angleatzone2 <- data.DF[angle.index2[,1],]
+#i <- 60
 
 zone <- angleatzone %>%
         dplyr::group_by (id,genotype) %>%
@@ -164,7 +173,7 @@ dataundersumma.DF <- zone %>%
 
 
 
-reversalsandangle <- cbind.fill(under60time,over60time[,3:5])
+reversalsandangle <- cbind(under60time,over60time[,3:5])
 
 paste("./reversalangle",i, "rda", sep = ".")
 save(reversalsandangle, file = paste("./reversalangle",i, "rda", sep = "."))
