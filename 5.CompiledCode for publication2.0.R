@@ -27,9 +27,7 @@ displacement <- function(x1,y1){
         y <- y1 - lag(y1)
         (sqrt((x^2)+(y^2)))
 }
-FindMultiple <- function(x) {
-        x%%1000
-}
+
 wvector <- function(x){
         (x)-lag(x)
 }
@@ -82,7 +80,8 @@ anglecalc <- function(x1,y1,x2,y2){
 ###############Start of analysis
 data.DF <- data.DF %>%
         group_by(id) %>%
-        mutate(displacement = displacement(x,y),
+        mutate(displacement = displacement(smoothx,smoothy),
+               cumdisp = cumSkipNA(displacement,sum),
                wormx = wvector(x),
                wormy = wvector(y),
                refx = rvector(x,xref),
@@ -93,7 +92,8 @@ data.DF <- data.DF %>%
                smoothxref = rvector(smoothx, xref),
                smoothyref = rvector(smoothy, yref),
                bearing.angle.smooth = anglecalc2(wormxsmooth,wormysmooth,smoothxref,smoothyref),
-               speed = displacement/0.125)
+               speed = displacement/0.125,
+               distance.target = magnitude(smoothxref,smoothyref))
 save(data.DF, file = ".//databearing.rda")
 datasum <- data.DF %>%
         group_by(id,genotype) %>%
@@ -110,11 +110,13 @@ genotype <- datasum %>%
 
 data.DF <-data.DF %>% 
         dplyr::group_by(id) %>%
-        dplyr::mutate(xv = xvector(x),
-                      yv = xvector(y),
+        dplyr::mutate(xv = xvector(smoothx),
+                      yv = xvector(smoothy),
                       displacement =(displacementf(x1= xv, y1 = yv)),
                       cumdisp = cumSkipNA(displacement,sum))
-
+FindMultiple <- function(x) {
+        x%%1000
+}
 data.DF <- data.DF %>%
         group_by(id) %>%
         mutate(RoundedDisp = RoundTo(cumdisp, multiple = 100, FUN = round))
@@ -146,9 +148,15 @@ data1 <- WeatherVaning.Coord.DF %>%
                       beforecos = dot/(magnitude1*magnitude2),
                       steeringangle =180- (180/pi)*acos(pmin(pmax(beforecos,-1.0),1.0)))
 
-
-
-
+data1<- data1 %>%
+        select(time, id, genotype,Assay.ID, steeringangle)
+data.DF <- data.DF %>%
+        select(c(time,x,y,id,genotype,Assay.ID,smoothx,smoothy,xref,yref,date,backward.cor,
+                 RevCount,speed,bearing.angle,bearing.angle.smooth,
+                 distance.target,cumdisp))
+testy <- data.DF %>%
+        select(c(id,Assay.ID))
+# df3 <- merge(testy, data1, by=("id"))
 ###################g#################################################################
 #################################################################################################
 #############                                                           #########################
@@ -158,7 +166,7 @@ data1 <- WeatherVaning.Coord.DF %>%
 #################################################################################################
 
 save(data1, file = ".//completedata.rda")  
-
+break
 
 good <- ggplot(data1, aes(x = (x),y = (y)))+
         geom_point(aes(color = (steeringangle)),size =1 ) +coord_fixed(ratio=1)

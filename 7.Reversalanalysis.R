@@ -11,16 +11,33 @@ rm(list=ls())
 setwd("~/Desktop/R Code to Review/glr-3 Project Files/Raw Data for Figures/Figure 1/Figure 1 Spreadsheets Data/ICE Diacetyl copy")
 load('./databearing.rda')
 data.DF <- data.DF %>%
-        select(c(time,x,y,id,genotype,Assay.ID,xref,yref,date,smoothx,smoothy,backward.cor,RevCount,speed,bearing.angle,bearing.angle.smooth))
+        select(c(time,x,y,id,genotype,Assay.ID,xref,yref,date,smoothx,
+                 smoothy,backward.cor,RevCount,speed,bearing.angle,
+                 bearing.angle.smooth,distance.target))
+
+low <- 0
+high <- 50
 #data.DF <- data.complete.DF
 #################################Determining angle thresholds for subsequent analysis
 ##############################################################
 #################################
 #################################
 x <- abs(data.frame(data.DF$bearing.angle.smooth))
+
 data.DF <- data.DF %>% 
         group_by(id,genotype) %>%
-        mutate(Angle.Threshold = if_else(bearing.angle.smooth > 45,0,1 ))
+        mutate(Angle.Threshold = case_when(
+                bearing.angle.smooth > high  ~ 0,
+                bearing.angle.smooth < low  ~ 0,
+                bearing.angle.smooth > 1  ~ 1))
+
+
+
+data.DF <- data.DF %>%
+        group_by(id, genotype) %>%
+        mutate(RevCount = if_else(RevCount <= 0,0,1 )) 
+
+
 # angle <- 45
 # x[x < angle] <- 0 #####0 equals under threshold
 # x[x > angle] <- 1
@@ -37,6 +54,132 @@ numbering = function(v,k) {
         
         
 }
+
+data.DF <- data.DF %>% 
+        group_by(id,genotype) %>%
+        mutate(Clean.Reversal = numbering(backward.cor, 24),
+               RevCount = lag(Clean.Reversal)-Clean.Reversal) ####What duration in frames of reversals do you cut out?
+
+data.DF <- data.DF %>%
+        # Define the start of Reversal.ID (putting 1 at the start of Reversal.ID)
+        mutate(Reversal.ID = case_when((RevCount)< 1  ~ 0, TRUE ~ 1)) %>%
+        # Extend the events using cumsum()
+        mutate(Reversal.ID = case_when(RevCount< 1 ~ cumsum(Reversal.ID)))
+
+
+
+#################Total Reversal Frequency######################################
+################# 
+################# 
+################# 
+Total.Reversal.DF <- data.DF %>%
+        group_by(id, genotype) %>%
+        mutate(RevCount = if_else(RevCount <= 0,0,1 )) 
+
+Total.Reversal.Frequency.DF <- Total.Reversal.DF %>%
+        group_by(id, genotype,date) %>%
+        dplyr::summarise(Time.Observed = max ((time) - min (time))/60,
+                  Rev.Freq = sum(RevCount, na.rm = T)/Time.Observed)
+
+
+
+inds = which(Total.Reversal.DF$RevCount == 1)
+# We use lapply() to get all rows for all indices, result is a list
+rows <- lapply(inds, function(x) (x-2):(x))
+# With unlist() you get all relevant rows
+Data.Before.Reversals.DF <- Total.Reversal.DF[unlist(rows),]
+
+Before.Reversal.Summary.DF <- Data.Before.Reversals.DF %>%
+        group_by(id, Reversal.ID, genotype) %>%
+        dplyr::summarize(meanAngle = mean(bearing.angle.smooth,na.rm = T),
+                  meanSpeed = mean(speed, na.rm = T))
+
+ggplot(data= Before.Reversal.Summary.DF, aes(x= meanAngle, color = genotype)) +
+        geom_density()
+
+Before.Reversal.Summary.Genotype.DF <- Before.Reversal.Summary.DF %>%
+        group_by(genotype) %>%
+        dplyr::summarise(Angle =mean(meanAngle))
+
+Between.25.and.50.DF <- Before.Reversal.Summary.DF %>%
+        filter(meanAngle>low & meanAngle <high)
+
+Between.25.and.50.DF <- Between.25.and.50.DF %>%
+        group_by(id,Reversal.ID,genotype) %>%
+        dplyr::mutate(numrev = n())
+
+Between.25.and.50.DF <- Between.25.and.50.DF %>%
+        group_by(id,genotype) %>%
+        dplyr::summarise(numRev = sum(numrev))
+
+Timebetween.DF <- data.DF %>%
+        group_by(id,genotype) %>%
+        dplyr::summarise(timebetween = (sum(Angle.Threshold,na.rm = T)/8)/60)
+
+Between.25.and.50.DF <- inner_join(Between.25.and.50.DF, Timebetween.DF, by = c("id","genotype"))
+
+Between.25.and.50.DF <- Between.25.and.50.DF %>%
+        group_by(id,genotype) %>%
+        mutate(AvgFreq = numRev/timebetween)
+
+Between.25.and.50.Genotype.DF <- Between.25.and.50.DF %>%
+        group_by(genotype) %>%
+        dplyr::summarise(meanFreq = mean(AvgFreq))
+
+break
+# 
+# Data.Before.Reversals.DF <- Data.Before.Reversals.DF %>%
+#         # Define the start of Reversal.ID (putting 1 at the start of Reversal.ID)
+#         mutate(Reversal.ID = case_when((RevCount)>=1  ~ 1, TRUE ~ 0)) %>%
+#         # Extend the events using cumsum()
+#         mutate(Reversal.ID = case_when(RevCount<1 ~ cumsum(Reversal.ID)))
+#         
+rev.Freq.DF <- Total.Reversal.Frequency.DF %>%
+        group_by(genotype,date) %>%
+        dplyr::summarize(Rev.Freq.M = mean(Rev.Freq, na.rm = T),
+                         semRev.Freq = sd(Rev.Freq,na.rm = T)/sqrt(n()))
+
+totalrev.plot <- ggplot(data=tgc, aes(x=genotype, y=reversal.frequency)) +
+        geom_bar(stat="summary",fun.y = "mean", (aes(fill = genotype, color = "red"))) +
+        scale_y_continuous(expand = c(0,0))+
+        theme_classic()+
+        geom_errorbar(aes(ymin=reversal.frequency-se, ymax=reversal.frequency+se),
+                      width=.2,                    # Width of the error bars
+                      position=position_dodge(.9))+
+        theme(legend.position = "none",axis.title = element_text(size=20),axis.text = element_text(size=15))+
+        ylab("Reversals per minute")
+
+totalrev.plot
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #test <- (numbering(data.DF$backward.cor,1))
 # data.DF <- data.DF %>%
 #         group_by(id) %>%

@@ -16,7 +16,7 @@ library(data.table)
 library(rowr)
 rm(list=ls())
 setwd("~/Desktop/R Code to Review/glr-3 Project Files/Raw Data for Figures/Figure 1/Figure 1 Spreadsheets Data/ICE Diacetyl copy")
-load('./datasmoothandfull.rda')
+load('./Realwormsforanalysis.rda')
 data.DF <- real.worms.data.DF
 data.DF <- data.DF %>% 
     mutate(backward = recode(backward, "R" = 1, "F"=0, "I"=0))
