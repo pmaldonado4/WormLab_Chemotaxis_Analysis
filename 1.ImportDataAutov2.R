@@ -8,7 +8,7 @@ library(ggplot2)
 library(gridExtra)
 library(stringi)
 library(ggforce)
-setwd("~/Desktop/R Code to Review/glr-3 Project Files/Raw Data for Figures/Figure 1/Figure 1 Spreadsheets Data/ICE Diacetyl copy")
+setwd("~/Desktop/R Code to Review/glr-3 Project Files/Raw Data for Figures/Figure 1/Figure 1 Spreadsheets Data/Hiscl Diacetyl copy 2")
 
 genotypes <- data.frame(list.files(path = ".", pattern = NULL, all.files = FALSE,
                        full.names = FALSE, recursive = FALSE,
